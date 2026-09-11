@@ -204,6 +204,7 @@ var STORAGE_KEY = "deviceRatingSubmissions_v2";
 function emptyDevice(){ return { deviceCode:'', rating:null, wouldBuy:null, notes:'' }; }
 function emptyComparison(){ return { device1: emptyDevice(), device2: emptyDevice(), preferredCode:'' }; }
 var comparison = emptyComparison();
+var participantName = '';
 var step = 'device1'; // device1 | device2 | preference | complete
 var errorMsg = '';
 var saving = false;
@@ -236,6 +237,11 @@ function renderDeviceForm(n){
   var d = comparison['device'+n];
   var html = '<div class="card">';
   html += '<div class="screenTitle">Device '+n+'</div>';
+
+  if(n === 1){
+    html += '<label class="fieldLabel">Participant Name</label>';
+    html += '<input type="text" id="participantNameInput" placeholder="Your name" value="'+esc(participantName)+'" onchange="participantName=this.value">';
+  }
 
   html += '<label class="fieldLabel">Device Code</label>';
   html += '<input type="text" id="deviceCodeInput" placeholder="e.g. 214 or DVC-7" value="'+esc(d.deviceCode)+'" onchange="setDeviceField('+n+',\'deviceCode\',this.value)">';
@@ -305,6 +311,7 @@ function setWouldBuy(n, v){ comparison['device'+n].wouldBuy = v; render(); }
 
 function validateDevice(n){
   var d = comparison['device'+n];
+  if(n===1 && !participantName.trim()) return 'Enter the participant name.';
   if(!d.deviceCode.trim()) return 'Enter a device code.';
   if(!d.rating) return 'Select a rating from 1 to 5.';
   if(d.wouldBuy === null) return "Answer whether you'd buy this product.";
@@ -344,6 +351,7 @@ function submitComparison(){
   var entry = {
     id: uid(),
     timestamp: new Date().toISOString(),
+    ParticipantName: participantName.trim(),
     Device1_Code: d1.deviceCode.trim(),
     Device1_Rating: d1.rating,
     Device1_WouldBuy: d1.wouldBuy,
