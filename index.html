@@ -185,7 +185,7 @@ textarea{min-height:70px;resize:vertical;}
 <div id="app">
   <header id="appHeader">
     <h1>RATING</h1>
-    <div class="sub" id="headerSub">quick device feedback</div>
+    <div class="sub" id="headerSub">compare two devices</div>
   </header>
   <main id="screen"></main>
 </div>
@@ -196,90 +196,102 @@ textarea{min-height:70px;resize:vertical;}
    as-is for this tool too (it auto-creates headers for any row shape).
 ===================================================================== */
 var SHEETS_URL = "https://script.google.com/macros/s/AKfycbzwY8x4F4iuEU4nWLOQshHMzr3bUdhbqGK91G3TIt3Ab99szcM9hHZoUnRa_uVrMj5Y/exec";
-var STORAGE_KEY = "deviceRatingSubmissions_v1";
+var STORAGE_KEY = "deviceRatingSubmissions_v2";
 
 /* =====================================================================
    STATE
 ===================================================================== */
-function emptyForm(){ return { deviceCode:'', rating:null, wouldBuy:null, notes:'' }; }
-var appForm = emptyForm();
-var step = 'form'; // form | askMore | complete
+function emptyDevice(){ return { deviceCode:'', rating:null, wouldBuy:null, notes:'' }; }
+function emptyComparison(){ return { device1: emptyDevice(), device2: emptyDevice(), preferredCode:'' }; }
+var comparison = emptyComparison();
+var step = 'device1'; // device1 | device2 | preference | complete
 var errorMsg = '';
 var saving = false;
-var sessionLog = [];
+var lastSubmission = null;
 
-function uid(){ return 'd_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+function uid(){ return 'c_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
 function esc(s){ return (s===undefined||s===null) ? '' : String(s).replace(/"/g,'&quot;'); }
 
 /* =====================================================================
    RENDER
 ===================================================================== */
 function render(){
-  document.getElementById('headerSub').textContent =
-    sessionLog.length > 0 ? (sessionLog.length + ' device' + (sessionLog.length===1?'':'s') + ' rated this session') : 'quick device feedback';
+  var subText = {
+    device1: 'device 1 of 2',
+    device2: 'device 2 of 2',
+    preference: 'which one is better?',
+    complete: 'comparison complete'
+  }[step];
+  document.getElementById('headerSub').textContent = subText;
 
   var html = '';
-  if(step === 'form') html = renderForm();
-  else if(step === 'askMore') html = renderAskMore();
+  if(step === 'device1') html = renderDeviceForm(1);
+  else if(step === 'device2') html = renderDeviceForm(2);
+  else if(step === 'preference') html = renderPreference();
   else if(step === 'complete') html = renderComplete();
   document.getElementById('screen').innerHTML = html;
 }
 
-function renderForm(){
+function renderDeviceForm(n){
+  var d = comparison['device'+n];
   var html = '<div class="card">';
+  html += '<div class="screenTitle">Device '+n+'</div>';
+
   html += '<label class="fieldLabel">Device Code</label>';
-  html += '<input type="text" id="deviceCodeInput" placeholder="e.g. 214 or DVC-7" value="'+esc(appForm.deviceCode)+'" onchange="appForm.deviceCode=this.value">';
+  html += '<input type="text" id="deviceCodeInput" placeholder="e.g. 214 or DVC-7" value="'+esc(d.deviceCode)+'" onchange="setDeviceField('+n+',\'deviceCode\',this.value)">';
 
   html += '<label class="fieldLabel">Rating</label>';
   html += '<div class="ratingRow">';
   for(var v=1; v<=5; v++){
-    html += '<button type="button" class="ratingBtn '+(appForm.rating===v?'active':'')+'" onclick="setRating('+v+')">'+v+'</button>';
+    html += '<button type="button" class="ratingBtn '+(d.rating===v?'active':'')+'" onclick="setRating('+n+','+v+')">'+v+'</button>';
   }
   html += '</div>';
   html += '<div class="ratingAnchors"><span>poor</span><span>excellent</span></div>';
 
   html += '<label class="fieldLabel">Would you buy this product?</label>';
   html += '<div class="buyRow">';
-  html += '<button type="button" class="buyBtn yes '+(appForm.wouldBuy===true?'active':'')+'" onclick="setWouldBuy(true)">Yes</button>';
-  html += '<button type="button" class="buyBtn no '+(appForm.wouldBuy===false?'active':'')+'" onclick="setWouldBuy(false)">No</button>';
+  html += '<button type="button" class="buyBtn yes '+(d.wouldBuy===true?'active':'')+'" onclick="setWouldBuy('+n+',true)">Yes</button>';
+  html += '<button type="button" class="buyBtn no '+(d.wouldBuy===false?'active':'')+'" onclick="setWouldBuy('+n+',false)">No</button>';
   html += '</div>';
 
   html += '<label class="fieldLabel">Notes <span class="optTag">(optional)</span></label>';
-  html += '<textarea id="notesInput" placeholder="Anything else worth flagging about this device…" onchange="appForm.notes=this.value">'+esc(appForm.notes)+'</textarea>';
+  html += '<textarea id="notesInput" placeholder="Anything else worth flagging about this device…" onchange="setDeviceField('+n+',\'notes\',this.value)">'+esc(d.notes)+'</textarea>';
 
   if(errorMsg){ html += '<div class="errorMsg">'+esc(errorMsg)+'</div>'; }
-  html += '<button class="btn btn-primary" '+(saving?'disabled':'')+' onclick="submitRating()">'+(saving?'Saving…':'Submit Rating')+'</button>';
+  var btnLabel = n===1 ? 'Next: Device 2' : 'Next: Compare';
+  html += '<button class="btn btn-primary" onclick="goToNextDevice('+n+')">'+btnLabel+'</button>';
   html += '</div>';
   return html;
 }
 
-function renderAskMore(){
-  var last = sessionLog[sessionLog.length-1];
+function renderPreference(){
+  var d1 = comparison.device1, d2 = comparison.device2;
   var html = '<div class="card">';
-  html += '<div class="savedTag">✓ SAVED</div>';
-  html += '<div id="submitStatus" class="statusMsg pending">Sending…</div>';
-  html += '<div class="deviceCallout">Rating for device <b>'+esc(last.deviceCode)+'</b> recorded.</div>';
-  html += '<div class="screenSub" style="margin-bottom:16px;">Are there any other devices to rate?</div>';
-  html += '<div class="askRow">';
-  html += '<button class="btn btn-primary" onclick="rateAnother()">Yes, rate another</button>';
-  html += '<button class="btn btn-outline" onclick="finish()">No, finish</button>';
-  html += '</div>';
+  html += '<div class="screenTitle">Which One Is Better?</div>';
+  html += '<div class="screenSub">You rated <b>#'+esc(d1.deviceCode)+'</b> and <b>#'+esc(d2.deviceCode)+'</b>.</div>';
+  html += '<label class="fieldLabel">Enter the device code you preferred</label>';
+  html += '<input type="text" id="preferredInput" placeholder="e.g. '+esc(d1.deviceCode)+'" value="'+esc(comparison.preferredCode)+'" onchange="comparison.preferredCode=this.value">';
+  if(errorMsg){ html += '<div class="errorMsg">'+esc(errorMsg)+'</div>'; }
+  html += '<button class="btn btn-primary" '+(saving?'disabled':'')+' onclick="submitComparison()">'+(saving?'Saving…':'Submit Comparison')+'</button>';
   html += '</div>';
   return html;
 }
 
 function renderComplete(){
+  var d1 = comparison.device1, d2 = comparison.device2;
   var html = '<div class="card">';
-  html += '<div class="screenTitle" style="color:var(--green);">TEST COMPLETE</div>';
-  html += '<div class="screenSub">'+sessionLog.length+' device'+(sessionLog.length===1?'':'s')+' rated this session. Thank you.</div>';
-  sessionLog.forEach(function(r){
+  html += '<div class="screenTitle" style="color:var(--green);">COMPARISON COMPLETE</div>';
+  html += '<div id="submitStatus" class="statusMsg pending">Sending…</div>';
+  [d1, d2].forEach(function(r){
+    var preferred = r.deviceCode.trim().toLowerCase() === comparison.preferredCode.trim().toLowerCase();
     html += '<div class="summaryRow">';
-    html += '<span class="summaryCode">#'+esc(r.deviceCode)+'</span>';
+    html += '<span class="summaryCode">#'+esc(r.deviceCode)+(preferred?' \u2605':'')+'</span>';
     html += '<span class="summaryRating">rating '+r.rating+'/5</span>';
     html += '<span class="summaryBuy '+(r.wouldBuy?'yes':'no')+'">'+(r.wouldBuy?'would buy':'would not buy')+'</span>';
     html += '</div>';
   });
-  html += '<button class="btn btn-outline" style="margin-top:16px;" onclick="startOver()">Start a New Session</button>';
+  html += '<div class="screenSub" style="margin-top:14px;">Preferred: <b style="color:var(--gold);font-family:monospace;">#'+esc(comparison.preferredCode)+'</b></div>';
+  html += '<button class="btn btn-outline" style="margin-top:16px;" onclick="startOver()">Start a New Comparison</button>';
   html += '</div>';
   return html;
 }
@@ -287,36 +299,71 @@ function renderComplete(){
 /* =====================================================================
    ACTIONS
 ===================================================================== */
-function setRating(v){ appForm.rating = v; render(); }
-function setWouldBuy(v){ appForm.wouldBuy = v; render(); }
+function setDeviceField(n, key, val){ comparison['device'+n][key] = val; }
+function setRating(n, v){ comparison['device'+n].rating = v; render(); }
+function setWouldBuy(n, v){ comparison['device'+n].wouldBuy = v; render(); }
 
-function validate(){
-  if(!appForm.deviceCode.trim()) return 'Enter a device code.';
-  if(!appForm.rating) return 'Select a rating from 1 to 5.';
-  if(appForm.wouldBuy === null) return "Answer whether you'd buy this product.";
+function validateDevice(n){
+  var d = comparison['device'+n];
+  if(!d.deviceCode.trim()) return 'Enter a device code.';
+  if(!d.rating) return 'Select a rating from 1 to 5.';
+  if(d.wouldBuy === null) return "Answer whether you'd buy this product.";
+  if(n===2 && d.deviceCode.trim().toLowerCase() === comparison.device1.deviceCode.trim().toLowerCase()){
+    return 'Device 2 needs a different code than Device 1.';
+  }
   return null;
 }
 
-function submitRating(){
-  var err = validate();
+function goToNextDevice(n){
+  var err = validateDevice(n);
+  if(err){ errorMsg = err; render(); return; }
+  errorMsg = '';
+  step = (n===1) ? 'device2' : 'preference';
+  render();
+}
+
+function validatePreference(){
+  var pref = comparison.preferredCode.trim().toLowerCase();
+  if(!pref) return 'Enter the device code you preferred.';
+  var c1 = comparison.device1.deviceCode.trim().toLowerCase();
+  var c2 = comparison.device2.deviceCode.trim().toLowerCase();
+  if(pref !== c1 && pref !== c2){
+    return 'That code doesn\'t match either device you rated (#'+comparison.device1.deviceCode+' or #'+comparison.device2.deviceCode+'). Please re-enter.';
+  }
+  return null;
+}
+
+function submitComparison(){
+  var err = validatePreference();
   if(err){ errorMsg = err; render(); return; }
   errorMsg = '';
   saving = true;
   render();
 
+  var d1 = comparison.device1, d2 = comparison.device2;
   var entry = {
     id: uid(),
-    deviceCode: appForm.deviceCode.trim(),
-    rating: appForm.rating,
-    wouldBuy: appForm.wouldBuy,
-    notes: appForm.notes.trim(),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    Device1_Code: d1.deviceCode.trim(),
+    Device1_Rating: d1.rating,
+    Device1_WouldBuy: d1.wouldBuy,
+    Device1_Notes: d1.notes.trim(),
+    Device2_Code: d2.deviceCode.trim(),
+    Device2_Rating: d2.rating,
+    Device2_WouldBuy: d2.wouldBuy,
+    Device2_Notes: d2.notes.trim(),
+    PreferredDeviceCode: comparison.preferredCode.trim()
   };
 
   var backup = [];
   try{ backup = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); }catch(e){}
   backup.push(entry);
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(backup)); }catch(e){}
+
+  lastSubmission = entry;
+  saving = false;
+  step = 'complete';
+  render();
 
   fetch(SHEETS_URL, {
     method: "POST",
@@ -340,26 +387,12 @@ function submitRating(){
     var el = document.getElementById('submitStatus');
     if(el){ el.textContent = 'Could not reach server — saved locally on this device only'; el.className='statusMsg pending'; }
   });
-
-  sessionLog.push(entry);
-  saving = false;
-  step = 'askMore';
-  render();
 }
 
-function rateAnother(){
-  appForm = emptyForm();
-  step = 'form';
-  render();
-}
-function finish(){
-  step = 'complete';
-  render();
-}
 function startOver(){
-  appForm = emptyForm();
-  sessionLog = [];
-  step = 'form';
+  comparison = emptyComparison();
+  step = 'device1';
+  errorMsg = '';
   render();
 }
 
