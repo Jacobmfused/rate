@@ -195,7 +195,7 @@ textarea{min-height:70px;resize:vertical;}
    your Apps Script /exec URL. The existing apps-script.gs backend works
    as-is for this tool too (it auto-creates headers for any row shape).
 ===================================================================== */
-var SHEETS_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
+var SHEETS_URL = "https://script.google.com/macros/s/AKfycbzwY8x4F4iuEU4nWLOQshHMzr3bUdhbqGK91G3TIt3Ab99szcM9hHZoUnRa_uVrMj5Y/exec";
 var STORAGE_KEY = "deviceRatingSubmissions_v1";
 
 /* =====================================================================
@@ -257,6 +257,7 @@ function renderAskMore(){
   var last = sessionLog[sessionLog.length-1];
   var html = '<div class="card">';
   html += '<div class="savedTag">✓ SAVED</div>';
+  html += '<div id="submitStatus" class="statusMsg pending">Sending…</div>';
   html += '<div class="deviceCallout">Rating for device <b>'+esc(last.deviceCode)+'</b> recorded.</div>';
   html += '<div class="screenSub" style="margin-bottom:16px;">Are there any other devices to rate?</div>';
   html += '<div class="askRow">';
@@ -321,7 +322,24 @@ function submitRating(){
     method: "POST",
     headers: {"Content-Type": "text/plain;charset=utf-8"},
     body: JSON.stringify({row: entry})
-  }).catch(function(){ /* saved locally regardless; export button covers this */ });
+  }).then(function(resp){
+    return resp.text().then(function(text){
+      var parsed = null;
+      try{ parsed = JSON.parse(text); }catch(e){}
+      var el = document.getElementById('submitStatus');
+      if(!el) return;
+      if(parsed && parsed.ok){
+        el.textContent = 'Saved to server';
+        el.className = 'statusMsg ok';
+      } else {
+        el.textContent = 'Server rejected the data — saved locally on this device only';
+        el.className = 'statusMsg pending';
+      }
+    });
+  }).catch(function(){
+    var el = document.getElementById('submitStatus');
+    if(el){ el.textContent = 'Could not reach server — saved locally on this device only'; el.className='statusMsg pending'; }
+  });
 
   sessionLog.push(entry);
   saving = false;
