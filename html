@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Device Rating</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#1B3A5C;
+  --blue:#2E75B6;
+  --light:#E8F0F8;
+  --green:#27AE60;
+  --red:#C0392B;
+  --gold:#D4A017;
+  --shadow: 0 2px 10px rgba(27,58,92,0.12);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'DM Sans',system-ui,sans-serif;
+  background:var(--light);
+  color:var(--navy);
+  -webkit-tap-highlight-color:transparent;
+}
+#app{
+  max-width:480px;
+  margin:0 auto;
+  min-height:100vh;
+  background:var(--light);
+  display:flex;
+  flex-direction:column;
+}
+#appHeader{
+  position:sticky;
+  top:0;
+  z-index:50;
+  background:var(--navy);
+  color:#fff;
+  padding:14px 16px;
+  box-shadow:var(--shadow);
+  text-align:center;
+}
+#appHeader h1{
+  margin:0;
+  font-size:19px;
+  font-weight:800;
+  letter-spacing:0.5px;
+}
+#appHeader .sub{
+  font-size:11.5px;
+  color:#cfe0f2;
+  margin-top:4px;
+  font-weight:600;
+  letter-spacing:0.3px;
+}
+#screen{
+  flex:1;
+  padding:16px 16px 40px;
+}
+.card{
+  background:#fff;
+  border-radius:14px;
+  box-shadow:var(--shadow);
+  padding:20px;
+  margin-bottom:14px;
+}
+.screenTitle{
+  font-size:18px;
+  font-weight:800;
+  color:var(--navy);
+  margin:2px 0 10px;
+  text-align:center;
+}
+.screenSub{
+  font-size:13.5px;
+  color:#5a7089;
+  margin-bottom:14px;
+  line-height:1.4;
+  text-align:center;
+}
+label.fieldLabel{
+  display:block;
+  font-size:13.5px;
+  font-weight:700;
+  color:var(--navy);
+  margin-bottom:8px;
+}
+.optTag{color:#8296ac;font-weight:400;font-size:12px;}
+input[type=text], textarea{
+  width:100%;
+  font-family:inherit;
+  font-size:15px;
+  padding:11px 12px;
+  border:1.5px solid #c7d6e8;
+  border-radius:10px;
+  background:#fbfdff;
+  color:var(--navy);
+  margin-bottom:20px;
+}
+textarea{min-height:70px;resize:vertical;}
+.ratingRow{display:flex;gap:6px;margin-bottom:6px;}
+.ratingBtn{
+  flex:1;
+  height:50px;
+  border-radius:10px;
+  border:1.5px solid #c7d6e8;
+  background:#fbfdff;
+  color:#8296ac;
+  font-family:inherit;
+  font-weight:700;
+  font-size:17px;
+  cursor:pointer;
+}
+.ratingBtn.active{background:var(--navy);border-color:var(--navy);color:#fff;}
+.ratingAnchors{display:flex;justify-content:space-between;margin-bottom:20px;font-size:11px;color:#8296ac;}
+.buyRow{display:flex;gap:10px;margin-bottom:20px;}
+.buyBtn{
+  flex:1;
+  height:48px;
+  border-radius:10px;
+  border:1.5px solid #c7d6e8;
+  background:#fbfdff;
+  color:#8296ac;
+  font-family:inherit;
+  font-weight:700;
+  font-size:14px;
+  text-transform:uppercase;
+  letter-spacing:0.3px;
+  cursor:pointer;
+}
+.buyBtn.yes.active{background:var(--green);border-color:var(--green);color:#fff;}
+.buyBtn.no.active{background:var(--red);border-color:var(--red);color:#fff;}
+.btn{
+  display:block;
+  width:100%;
+  text-align:center;
+  padding:14px;
+  border-radius:12px;
+  font-size:15.5px;
+  font-weight:700;
+  border:none;
+  cursor:pointer;
+  margin-bottom:10px;
+}
+.btn-primary{background:var(--navy);color:#fff;}
+.btn-outline{background:#fff;color:var(--navy);border:1.5px solid var(--navy);}
+.btn:disabled{opacity:0.4;cursor:not-allowed;}
+.errorMsg{color:var(--red);font-size:13px;margin-bottom:12px;text-align:center;}
+.checkIcon{
+  width:56px;height:56px;border-radius:50%;
+  background:var(--green);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:30px;margin:0 auto 14px;
+}
+.savedTag{
+  text-align:center;color:var(--green);font-weight:800;font-size:12.5px;
+  letter-spacing:0.5px;margin-bottom:8px;
+}
+.deviceCallout{text-align:center;font-size:15.5px;margin-bottom:20px;}
+.deviceCallout b{color:var(--gold);font-family:monospace;}
+.askRow{display:flex;gap:10px;}
+.askRow .btn{margin-bottom:0;}
+.summaryRow{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-bottom:1px solid #e3ecf5;font-size:13.5px;
+}
+.summaryRow:last-child{border-bottom:none;}
+.summaryCode{font-family:monospace;color:var(--gold);font-weight:700;}
+.summaryRating{color:#5a7089;}
+.summaryBuy{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.3px;}
+.summaryBuy.yes{color:var(--green);}
+.summaryBuy.no{color:var(--red);}
+.statusMsg{
+  font-size:12.5px;font-weight:700;padding:8px 12px;border-radius:10px;
+  margin-bottom:12px;text-align:center;
+}
+.statusMsg.ok{background:#e6f6ec;color:var(--green);}
+.statusMsg.pending{background:#f2f7fc;color:var(--blue);}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="appHeader">
+    <h1>DEVICE RATING</h1>
+    <div class="sub" id="headerSub">quick device feedback</div>
+  </header>
+  <main id="screen"></main>
+</div>
+<script>
+/* =====================================================================
+   CONFIG — same pattern as the other Sensory Test tools: point this at
+   your Apps Script /exec URL. The existing apps-script.gs backend works
+   as-is for this tool too (it auto-creates headers for any row shape).
+===================================================================== */
+var SHEETS_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
+var STORAGE_KEY = "deviceRatingSubmissions_v1";
+
+/* =====================================================================
+   STATE
+===================================================================== */
+function emptyForm(){ return { deviceCode:'', rating:null, wouldBuy:null, notes:'' }; }
+var appForm = emptyForm();
+var step = 'form'; // form | askMore | complete
+var errorMsg = '';
+var saving = false;
+var sessionLog = [];
+
+function uid(){ return 'd_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+function esc(s){ return (s===undefined||s===null) ? '' : String(s).replace(/"/g,'&quot;'); }
+
+/* =====================================================================
+   RENDER
+===================================================================== */
+function render(){
+  document.getElementById('headerSub').textContent =
+    sessionLog.length > 0 ? (sessionLog.length + ' device' + (sessionLog.length===1?'':'s') + ' rated this session') : 'quick device feedback';
+
+  var html = '';
+  if(step === 'form') html = renderForm();
+  else if(step === 'askMore') html = renderAskMore();
+  else if(step === 'complete') html = renderComplete();
+  document.getElementById('screen').innerHTML = html;
+}
+
+function renderForm(){
+  var html = '<div class="card">';
+  html += '<label class="fieldLabel">Device Code</label>';
+  html += '<input type="text" id="deviceCodeInput" placeholder="e.g. 214 or DVC-7" value="'+esc(appForm.deviceCode)+'" onchange="appForm.deviceCode=this.value">';
+
+  html += '<label class="fieldLabel">Rating</label>';
+  html += '<div class="ratingRow">';
+  for(var v=1; v<=5; v++){
+    html += '<button type="button" class="ratingBtn '+(appForm.rating===v?'active':'')+'" onclick="setRating('+v+')">'+v+'</button>';
+  }
+  html += '</div>';
+  html += '<div class="ratingAnchors"><span>poor</span><span>excellent</span></div>';
+
+  html += '<label class="fieldLabel">Would you buy this product?</label>';
+  html += '<div class="buyRow">';
+  html += '<button type="button" class="buyBtn yes '+(appForm.wouldBuy===true?'active':'')+'" onclick="setWouldBuy(true)">Yes</button>';
+  html += '<button type="button" class="buyBtn no '+(appForm.wouldBuy===false?'active':'')+'" onclick="setWouldBuy(false)">No</button>';
+  html += '</div>';
+
+  html += '<label class="fieldLabel">Notes <span class="optTag">(optional)</span></label>';
+  html += '<textarea id="notesInput" placeholder="Anything else worth flagging about this device…" onchange="appForm.notes=this.value">'+esc(appForm.notes)+'</textarea>';
+
+  if(errorMsg){ html += '<div class="errorMsg">'+esc(errorMsg)+'</div>'; }
+  html += '<button class="btn btn-primary" '+(saving?'disabled':'')+' onclick="submitRating()">'+(saving?'Saving…':'Submit Rating')+'</button>';
+  html += '</div>';
+  return html;
+}
+
+function renderAskMore(){
+  var last = sessionLog[sessionLog.length-1];
+  var html = '<div class="card">';
+  html += '<div class="savedTag">✓ SAVED</div>';
+  html += '<div class="deviceCallout">Rating for device <b>'+esc(last.deviceCode)+'</b> recorded.</div>';
+  html += '<div class="screenSub" style="margin-bottom:16px;">Are there any other devices to rate?</div>';
+  html += '<div class="askRow">';
+  html += '<button class="btn btn-primary" onclick="rateAnother()">Yes, rate another</button>';
+  html += '<button class="btn btn-outline" onclick="finish()">No, finish</button>';
+  html += '</div>';
+  html += '</div>';
+  return html;
+}
+
+function renderComplete(){
+  var html = '<div class="card">';
+  html += '<div class="screenTitle" style="color:var(--green);">TEST COMPLETE</div>';
+  html += '<div class="screenSub">'+sessionLog.length+' device'+(sessionLog.length===1?'':'s')+' rated this session. Thank you.</div>';
+  sessionLog.forEach(function(r){
+    html += '<div class="summaryRow">';
+    html += '<span class="summaryCode">#'+esc(r.deviceCode)+'</span>';
+    html += '<span class="summaryRating">rating '+r.rating+'/5</span>';
+    html += '<span class="summaryBuy '+(r.wouldBuy?'yes':'no')+'">'+(r.wouldBuy?'would buy':'would not buy')+'</span>';
+    html += '</div>';
+  });
+  html += '<button class="btn btn-outline" style="margin-top:16px;" onclick="startOver()">Start a New Session</button>';
+  html += '</div>';
+  return html;
+}
+
+/* =====================================================================
+   ACTIONS
+===================================================================== */
+function setRating(v){ appForm.rating = v; render(); }
+function setWouldBuy(v){ appForm.wouldBuy = v; render(); }
+
+function validate(){
+  if(!appForm.deviceCode.trim()) return 'Enter a device code.';
+  if(!appForm.rating) return 'Select a rating from 1 to 5.';
+  if(appForm.wouldBuy === null) return "Answer whether you'd buy this product.";
+  return null;
+}
+
+function submitRating(){
+  var err = validate();
+  if(err){ errorMsg = err; render(); return; }
+  errorMsg = '';
+  saving = true;
+  render();
+
+  var entry = {
+    id: uid(),
+    deviceCode: appForm.deviceCode.trim(),
+    rating: appForm.rating,
+    wouldBuy: appForm.wouldBuy,
+    notes: appForm.notes.trim(),
+    timestamp: new Date().toISOString()
+  };
+
+  var backup = [];
+  try{ backup = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); }catch(e){}
+  backup.push(entry);
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(backup)); }catch(e){}
+
+  fetch(SHEETS_URL, {
+    method: "POST",
+    headers: {"Content-Type": "text/plain;charset=utf-8"},
+    body: JSON.stringify({row: entry})
+  }).catch(function(){ /* saved locally regardless; export button covers this */ });
+
+  sessionLog.push(entry);
+  saving = false;
+  step = 'askMore';
+  render();
+}
+
+function rateAnother(){
+  appForm = emptyForm();
+  step = 'form';
+  render();
+}
+function finish(){
+  step = 'complete';
+  render();
+}
+function startOver(){
+  appForm = emptyForm();
+  sessionLog = [];
+  step = 'form';
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
